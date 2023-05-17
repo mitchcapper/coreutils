@@ -32,6 +32,11 @@ find_mount_point (char const *file, struct stat const *file_stat)
   struct saved_cwd cwd;
   struct stat last_stat;
   char *mp = nullptr;		/* The malloc'd mount point.  */
+#ifdef _WIN32
+  mp = xmalloc (sizeof (char) * (MAX_PATH));
+  GetVolumePathName (file, mp, MAX_PATH);
+  return mp;
+#endif  
 
   if (save_cwd (&cwd) != 0)
     {

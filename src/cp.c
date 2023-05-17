@@ -346,6 +346,7 @@ re_protect (char const *const_dst_name, char const *dst_src_name,
 
       if (x->preserve_ownership)
         {
+#ifndef _WIN32
           if (lchownat (dst_dirfd, relname, p->st.st_uid, p->st.st_gid)
               != 0)
             {
@@ -359,6 +360,7 @@ re_protect (char const *const_dst_name, char const *dst_src_name,
                  the group, but ignore the possible error. */
               ignore_value (lchownat (dst_dirfd, relname, -1, p->st.st_gid));
             }
+#endif // !_WIN32
         }
 
       if (x->preserve_mode)

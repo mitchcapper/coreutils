@@ -21,8 +21,12 @@
 #include <getopt.h>
 #include <sys/types.h>
 #include <signal.h>
+#ifndef _WIN32
 #include <pwd.h>
 #include <grp.h>
+#else
+#include "execute.h"
+#endif
 #include <selinux/label.h>
 #include <sys/wait.h>
 
@@ -191,6 +195,7 @@ need_copy (char const *src_name, char const *dest_name,
       || (dest_sb.st_mode & CHMOD_MODE_BITS) != mode)
     return true;
 
+#ifndef _WIN32
   if (owner_id == (uid_t) -1)
     {
       errno = 0;
@@ -234,7 +239,7 @@ need_copy (char const *src_name, char const *dest_name,
       if (!scontext_match)
         return true;
     }
-
+#endif
   /* compare files content */
   src_fd = open (src_name, O_RDONLY | O_BINARY);
   if (src_fd < 0)
@@ -435,6 +440,9 @@ copy_file (char const *from, char const *to,
 static bool
 change_attributes (char const *name, int dirfd, char const *relname)
 {
+  #ifdef _WIN32
+  return true;
+  #endif
   bool ok = false;
   /* chown must precede chmod because on some systems,
      chown clears the set[ug]id bits for non-superusers,
@@ -492,6 +500,7 @@ strip (char const *name)
 {
   int status;
   bool ok = false;
+  #ifndef _WIN32
   pid_t pid = fork ();
 
   switch (pid)
@@ -517,6 +526,16 @@ strip (char const *name)
         ok = true;      /* strip succeeded */
       break;
     }
+#else
+  const char* const values[] = {strip_program,name, NULL};
+
+
+  status = execute(strip_program,strip_program,values, NULL, false, false,false,false, true, false, NULL);
+   if (! WIFEXITED (status) || WEXITSTATUS (status))
+        error (0, 0, _("strip process terminated abnormally"));
+      else
+        ok = true;
+#endif    
   return ok;
 }
 
@@ -525,6 +544,7 @@ strip (char const *name)
 static void
 get_ids (void)
 {
+#ifndef _WIN32  
   struct passwd *pw;
   struct group *gr;
 
@@ -565,6 +585,7 @@ get_ids (void)
     }
   else
     group_id = (gid_t) -1;
+#endif    
 }
 
 void

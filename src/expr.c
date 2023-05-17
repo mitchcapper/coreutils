@@ -42,7 +42,7 @@
 
 /* Various parts of this code assume size_t fits into unsigned long
    int, the widest unsigned type that GMP supports.  */
-static_assert (SIZE_MAX <= ULONG_MAX);
+static_assert (sizeof(size_t) <= ULONG_MAX);
 
 /* The official name of this program (e.g., no 'g' prefix).  */
 #define PROGRAM_NAME "expr"

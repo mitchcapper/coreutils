@@ -744,6 +744,9 @@ filter_mount_list (bool devices_only)
       else
         {
           /* If we've already seen this device...  */
+          #ifdef _WIN32
+            buf.st_dev = me->me_dev;
+          #endif
           struct devlist *seen_dev = devlist_for_dev (buf.st_dev);
 
           if (seen_dev)
@@ -1074,7 +1077,10 @@ get_dev (char const *device, char const *mount_point, char const *file,
             }
         }
     }
-
+#ifdef _WIN32
+    if (fstype == NULL || strcmp(fstype, "-") == 0)
+      fstype = fsu.fsu_fs_type; 
+#endif
   if (fsu.fsu_blocks == 0 && !show_all_fs && !show_listed_fs)
     return;
 

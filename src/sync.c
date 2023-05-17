@@ -116,6 +116,7 @@ sync_arg (enum sync_mode mode, char const *file)
 
   /* We used O_NONBLOCK above to not hang with fifos,
      so reset that here.  */
+#ifndef _WIN32
   int fdflags = fcntl (fd, F_GETFL);
   if (fdflags == -1
       || fcntl (fd, F_SETFL, fdflags & ~O_NONBLOCK) < 0)
@@ -124,7 +125,7 @@ sync_arg (enum sync_mode mode, char const *file)
              quoteaf (file));
       ret = false;
     }
-
+#endif
   if (ret == true)
     {
       int sync_status = -1;

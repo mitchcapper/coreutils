@@ -53,7 +53,9 @@ enum SIGNAL_MODE {
   UNCHANGED = 0,
   DEFAULT,       /* Set to default handler (SIG_DFL).  */
   DEFAULT_NOERR, /* Ditto, but ignore sigaction(2) errors.  */
+#ifndef _WIN32
   IGNORE,        /* Set to ignore (SIG_IGN).  */
+#endif  
   IGNORE_NOERR   /* Ditto, but ignore sigaction(2) errors.  */
 };
 static enum SIGNAL_MODE *signals;
@@ -551,7 +553,12 @@ parse_signal_action_params (char const *arg, bool set_default)
          Some signals cannot be set to ignore or default (e.g., SIGKILL,
          SIGSTOP on most OSes, and SIGCONT on AIX.) - so ignore errors.  */
       for (int i = 1 ; i <= SIGNUM_BOUND; i++)
+#ifndef _WIN32
         signals[i] = set_default ? DEFAULT_NOERR : IGNORE_NOERR;
+#else
+        if (sig2str (i, signame) == 0 && set_default)
+          signals[i] = DEFAULT_NOERR;
+#endif 
       return;
     }
 
