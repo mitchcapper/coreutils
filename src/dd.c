@@ -634,6 +634,7 @@ Each FLAG symbol may be:\n\
         fputs (_("  text      use text I/O for data\n"), stdout);
 
       {
+#ifndef _WIN32        
         printf (_("\
 \n\
 Sending a %s signal to a running 'dd' process makes it\n\
@@ -642,6 +643,7 @@ print I/O statistics to standard error and then resume copying.\n\
 Options are:\n\
 \n\
 "), SIGINFO == SIGUSR1 ? "USR1" : "INFO");
+#endif
       }
 
       fputs (HELP_OPTION_DESCRIPTION, stdout);
@@ -862,7 +864,9 @@ siginfo_handler (int sig)
 static void
 install_signal_handlers (void)
 {
+#ifndef _WIN32  
   bool catch_siginfo = ! (SIGINFO == SIGUSR1 && getenv ("POSIXLY_CORRECT"));
+#endif
 
 #if SA_NOCLDSTOP
 
@@ -893,12 +897,13 @@ install_signal_handlers (void)
     }
 
 #else
-
+#ifndef _WIN32
   if (catch_siginfo)
     {
       signal (SIGINFO, siginfo_handler);
       siginterrupt (SIGINFO, 1);
     }
+#endif
   if (signal (SIGINT, SIG_IGN) != SIG_IGN)
     {
       signal (SIGINT, interrupt_handler);
@@ -1175,7 +1180,7 @@ static idx_t
 iwrite (int fd, char const *buf, idx_t size)
 {
   idx_t total_written = 0;
-
+#ifndef _WIN32
   if ((output_flags & O_DIRECT) && size < output_blocksize)
     {
       int old_flags = fcntl (STDOUT_FILENO, F_GETFL);
@@ -1199,7 +1204,7 @@ iwrite (int fd, char const *buf, idx_t size)
       /* After the subsequent fsync we'll call invalidate_cache
          to attempt to clear all data from the page cache.  */
     }
-
+#endif
   while (total_written < size)
     {
       ssize_t nwritten = 0;
@@ -2046,6 +2051,7 @@ copy_with_unblock (char const *buf, idx_t nread)
 static void
 set_fd_flags (int fd, int add_flags, char const *name)
 {
+#ifndef _WIN32  
   /* Ignore file creation flags that are no-ops on file descriptors.  */
   add_flags &= ~ (O_NOCTTY | O_NOFOLLOW);
 
@@ -2086,6 +2092,7 @@ set_fd_flags (int fd, int add_flags, char const *name)
       if (!ok)
         error (EXIT_FAILURE, errno, _("setting flags for %s"), quoteaf (name));
     }
+#endif    
 }
 
 /* The main loop.  */

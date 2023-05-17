@@ -1375,7 +1375,11 @@ main (int argc, char **argv)
     static int const sig[] =
       {
         /* The usual suspects.  */
+#ifndef _WIN32
         SIGALRM, SIGHUP, SIGINT, SIGPIPE, SIGQUIT, SIGTERM,
+#else
+      SIGINT,  SIGTERM,
+#endif        
 #ifdef SIGPOLL
         SIGPOLL,
 #endif

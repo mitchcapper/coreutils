@@ -60,19 +60,23 @@ Create the DIRECTORY(ies), if they do not already exist.\n\
 "), stdout);
 
       emit_mandatory_arg_note ();
-
+#ifndef _WIN32
+fputs (_("\
+  -m, --mode=MODE   set file mode (as in chmod), not a=rwx - umask\n"), stdout);
+#endif
       fputs (_("\
-  -m, --mode=MODE   set file mode (as in chmod), not a=rwx - umask\n\
   -p, --parents     no error if existing, make parent directories as needed,\n\
                     with their file modes unaffected by any -m option\n\
   -v, --verbose     print a message for each created directory\n\
 "), stdout);
+#ifndef _WIN32
       fputs (_("\
   -Z                   set SELinux security context of each created directory\n\
                          to the default type\n\
       --context[=CTX]  like -Z, or if CTX is specified then set the SELinux\n\
                          or SMACK security context to CTX\n\
 "), stdout);
+#endif
       fputs (HELP_OPTION_DESCRIPTION, stdout);
       fputs (VERSION_OPTION_DESCRIPTION, stdout);
       emit_ancillary_info (PROGRAM_NAME);
@@ -124,7 +128,7 @@ static int
 make_ancestor (char const *dir, char const *component, void *options)
 {
   struct mkdir_options const *o = options;
-
+#ifndef _WIN32
   if (o->set_security_context
       && defaultcon (o->set_security_context, component, S_IFDIR) < 0
       && ! ignorable_ctx_err (errno))
@@ -140,9 +144,14 @@ make_ancestor (char const *dir, char const *component, void *options)
       umask (o->umask_self);
       errno = mkdir_errno;
     }
+#else
+  int r = mkdir (component, 0);
+#endif	
   if (r == 0)
     {
+#ifndef _WIN32      
       r = (o->umask_ancestor & S_IRUSR) != 0;
+#endif      
       announce_mkdir (dir, options);
     }
   return r;
@@ -155,6 +164,7 @@ process_dir (char *dir, struct savewd *wd, void *options)
   struct mkdir_options const *o = options;
 
   /* If possible set context before DIR created.  */
+#ifndef _WIN32  
   if (o->set_security_context)
     {
       if (! o->make_ancestor_function
@@ -163,7 +173,7 @@ process_dir (char *dir, struct savewd *wd, void *options)
         error (0, errno, _("failed to set default creation context for %s"),
                quoteaf (dir));
     }
-
+#endif
   int ret = (make_dir_parents (dir, wd, o->make_ancestor_function, options,
                                o->mode, announce_mkdir,
                                o->mode_bits, (uid_t) -1, (gid_t) -1, true)
@@ -175,6 +185,7 @@ process_dir (char *dir, struct savewd *wd, void *options)
      final component of DIR is created.  So for now, create the
      final component with the context from previous component
      and here we set the context for the final component. */
+#ifndef _WIN32
   if (ret == EXIT_SUCCESS && o->set_security_context
       && o->make_ancestor_function)
     {
@@ -183,7 +194,7 @@ process_dir (char *dir, struct savewd *wd, void *options)
         error (0, errno, _("failed to restore context for %s"),
                quoteaf (dir));
     }
-
+#endif
   return ret;
 }
 
@@ -196,7 +207,9 @@ main (int argc, char **argv)
   struct mkdir_options options;
 
   options.make_ancestor_function = nullptr;
+#ifndef _WIN32  
   options.mode = S_IRWXUGO;
+#endif
   options.mode_bits = 0;
   options.created_directory_format = nullptr;
   options.set_security_context = nullptr;
@@ -223,11 +236,13 @@ main (int argc, char **argv)
           options.created_directory_format = _("created directory %s");
           break;
         case 'Z':
+#ifndef _WIN32        
           if (is_smack_enabled ())
             {
               /* We don't yet support -Z to restore context with SMACK.  */
               scontext = optarg;
             }
+
           else if (is_selinux_enabled () > 0)
             {
               if (optarg)
@@ -246,6 +261,7 @@ main (int argc, char **argv)
                      _("warning: ignoring --context; "
                        "it requires an SELinux/SMACK-enabled kernel"));
             }
+#endif                        
           break;
         case_GETOPT_HELP_CHAR;
         case_GETOPT_VERSION_CHAR (PROGRAM_NAME, AUTHORS);
@@ -259,7 +275,7 @@ main (int argc, char **argv)
       error (0, 0, _("missing operand"));
       usage (EXIT_FAILURE);
     }
-
+#ifndef _WIN32
   /* FIXME: This assumes mkdir() is done in the same process.
      If that's not always the case we would need to call this
      like we do when options.set_security_context.  */
@@ -302,7 +318,7 @@ main (int argc, char **argv)
 
       umask (options.umask_self);
     }
-
+#endif
   return savewd_process_files (argc - optind, argv + optind,
                                process_dir, &options);
 }

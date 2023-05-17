@@ -739,7 +739,11 @@ main (int argc, char **argv)
   page_size = getpagesize ();
   /* Line buffer stdout to ensure lines are written atomically and immediately
      so that processes running in parallel do not intersperse their output.  */
-  setvbuf (stdout, nullptr, _IOLBF, 0);
+#ifndef _WIN32
+  setvbuf(stdout, nullptr, _IOLBF, 0);
+#else
+  setvbuf(stdout, nullptr, _IONBF, 0); //windows treats _IOLBF the same as _IOFBF in addition a buffer of NULL and size of 0 is invalid unless you are doing IONBF.
+#endif // !_WIN32
 
   posixly_correct = (getenv ("POSIXLY_CORRECT") != nullptr);
 

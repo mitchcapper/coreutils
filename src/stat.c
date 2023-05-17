@@ -18,6 +18,7 @@
 
 #include <config.h>
 
+#ifndef _WIN32
 /* Keep this conditional in sync with the similar conditional in
    ../m4/stat-prog.m4.  */
 #if ((STAT_STATVFS || STAT_STATVFS64)                                       \
@@ -27,9 +28,11 @@
 #else
 # define USE_STATVFS 0
 #endif
+#endif
 
 #include <stdio.h>
 #include <sys/types.h>
+#ifndef _WIN32
 #include <pwd.h>
 #include <grp.h>
 #if USE_STATVFS
@@ -52,6 +55,10 @@
 #elif HAVE_OS_H /* BeOS */
 # include <fs_info.h>
 #endif
+
+#endif
+#include "fsusage.h"
+
 #include <selinux/selinux.h>
 #include <getopt.h>
 
@@ -72,7 +79,7 @@
 #include "find-mount-point.h"
 #include "xvasprintf.h"
 #include "statx.h"
-
+#ifndef _WIN32
 #if HAVE_STATX && defined STATX_INO
 # define USE_STATX 1
 #else
@@ -143,6 +150,7 @@ statfs (char const *filename, struct fs_info *buf)
 #  endif
 # endif
 #endif
+#endif //! _WIN32
 
 #ifdef SB_F_NAMEMAX
 # define OUT_NAMEMAX out_uint
@@ -153,6 +161,7 @@ statfs (char const *filename, struct fs_info *buf)
 # define OUT_NAMEMAX out_string
 #endif
 
+#ifndef _WIN32
 #if HAVE_STRUCT_STATVFS_F_BASETYPE
 # define STATXFS_FILE_SYSTEM_TYPE_MEMBER_NAME f_basetype
 #else
@@ -162,6 +171,7 @@ statfs (char const *filename, struct fs_info *buf)
 #  define STATXFS_FILE_SYSTEM_TYPE_MEMBER_NAME fsh_name
 # endif
 #endif
+#endif !_WIN32
 
 #if HAVE_GETATTRAT
 # include <attr.h>
@@ -251,6 +261,12 @@ print_stat (char *pformat, size_t prefix_len, char mod, char m,
    But f_type may only exist in statfs (Cygwin).  */
 NODISCARD
 static char const *
+#ifdef _WIN32
+human_fstype (struct fs_usage *statfsbuf)
+{
+  return (const char * ) statfsbuf->fsu_fs_type;
+}
+#else
 human_fstype (STRUCT_STATVFS const *statfsbuf)
 {
 #ifdef STATXFS_FILE_SYSTEM_TYPE_MEMBER_NAME
@@ -628,6 +644,7 @@ human_fstype (STRUCT_STATVFS const *statfsbuf)
     }
 #endif
 }
+#endif !_WIN32
 
 NODISCARD
 static char *
@@ -1258,7 +1275,7 @@ NODISCARD
 static bool
 do_statfs (char const *filename, char const *format)
 {
-  STRUCT_STATVFS statfsbuf;
+  struct fs_usage statfsbuf;
 
   if (STREQ (filename, "-"))
     {
@@ -1267,7 +1284,7 @@ do_statfs (char const *filename, char const *format)
       return false;
     }
 
-  if (STATFS (filename, &statfsbuf) != 0)
+  if (get_fs_usage(filename,NULL,&statfsbuf))
     {
       error (0, errno, _("cannot read file system information for %s"),
              quoteaf (filename));
@@ -1564,17 +1581,21 @@ print_stat (char *pformat, size_t prefix_len, char mod, char m,
       out_uint (pformat, prefix_len, statbuf->st_uid);
       break;
     case 'U':
+#ifndef _WIN32
       pw_ent = getpwuid (statbuf->st_uid);
       out_string (pformat, prefix_len,
                   pw_ent ? pw_ent->pw_name : "UNKNOWN");
+#endif ! _WIN32
       break;
     case 'g':
       out_uint (pformat, prefix_len, statbuf->st_gid);
       break;
     case 'G':
+#ifndef _WIN32
       gw_ent = getgrgid (statbuf->st_gid);
       out_string (pformat, prefix_len,
                   gw_ent ? gw_ent->gr_name : "UNKNOWN");
+#endif ! _WIN32      
       break;
     case 'm':
       fail |= out_mount_point (filename, pformat, prefix_len, statbuf);

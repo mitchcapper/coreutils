@@ -24,7 +24,11 @@ this program.  If not, see https://www.gnu.org/licenses/.  */
 
 #include <limits.h>
 #include <stdint.h>
-#include <stdio.h>
+#ifndef  _WIN32
+#include "../include/stdio.h"
+#else
+#include "../ucrt/stdio.h"
+#endif // ! _WIN32
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>

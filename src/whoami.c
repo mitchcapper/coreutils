@@ -21,8 +21,12 @@
 #include <config.h>
 #include <stdio.h>
 #include <sys/types.h>
+#ifndef _WIN32
 #include <pwd.h>
-
+#else
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#endif
 #include "system.h"
 #include "long-options.h"
 #include "quote.h"
@@ -79,10 +83,17 @@ main (int argc, char **argv)
 
   errno = 0;
   uid = geteuid ();
-  pw = uid == NO_UID && errno ? nullptr : getpwuid (uid);
+#ifndef _WIN32  
+  pw = (uid == NO_UID && errno ? nullptr : getpwuid (uid));
   if (!pw)
     error (EXIT_FAILURE, errno, _("cannot find name for user ID %ju"),
            (uintmax_t) uid);
   puts (pw->pw_name);
+#else
+  char buffer[1024];
+  DWORD len = sizeof(buffer);
+  BOOL res = GetUserName(buffer, &len);
+  puts (buffer);
+#endif
   return EXIT_SUCCESS;
 }
