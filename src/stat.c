@@ -18,10 +18,19 @@
 
 #include <config.h>
 
+#ifndef _WIN32
 /* Keep this conditional in sync with the similar conditional in
    ../m4/stat-prog.m4.  */
+#if ((STAT_STATVFS || STAT_STATVFS64)                                       \
+     && (HAVE_STRUCT_STATVFS_F_BASETYPE || HAVE_STRUCT_STATVFS_F_FSTYPENAME \
+         || (! HAVE_STRUCT_STATFS_F_FSTYPENAME && HAVE_STRUCT_STATVFS_F_TYPE)))
+# define USE_STATVFS 1
+#else
+# define USE_STATVFS 0
+#endif
+#endif
 
-
+#include <stddef.h>
 #include <stdio.h>
 #include <sys/types.h>
 #ifndef _WIN32
@@ -43,6 +52,7 @@
 # include <fs_info.h>
 #endif
 
+#endif
 #include "fsusage.h"
 
 #include <selinux/selinux.h>
@@ -65,11 +75,49 @@
 #include "find-mount-point.h"
 #include "xvasprintf.h"
 #include "statx.h"
-
+#ifndef _WIN32
 /* BeOS has a statvfs function, but it does not return sensible values
    for f_files, f_ffree and f_favail, and lacks f_type, f_basetype and
    f_fstypename.  Use 'struct fs_info' instead.  */
+NODISCARD
+static int
+statfs (char const *filename, struct fs_info *buf)
+{
+  dev_t device = dev_for_path (filename);
+  if (device < 0)
+    {
+      errno = (device == B_ENTRY_NOT_FOUND ? ENOENT
+               : device == B_BAD_VALUE ? EINVAL
+               : device == B_NAME_TOO_LONG ? ENAMETOOLONG
+               : device == B_NO_MEMORY ? ENOMEM
+               : device == B_FILE_ERROR ? EIO
+               : 0);
+      return -1;
+    }
   /* If successful, buf->dev will be == device.  */
+  return fs_stat_dev (device, buf);
+}
+#  define f_fsid dev
+#  define f_blocks total_blocks
+#  define f_bfree free_blocks
+#  define f_bavail free_blocks
+#  define f_bsize io_size
+#  define f_files total_nodes
+#  define f_ffree free_nodes
+#  define STRUCT_STATVFS struct fs_info
+#  define STRUCT_STATXFS_F_FSID_IS_INTEGER true
+#  define STATFS_FRSIZE(S) ((S)->block_size)
+# else
+#  define STRUCT_STATVFS struct statfs
+#  define STRUCT_STATXFS_F_FSID_IS_INTEGER STRUCT_STATFS_F_FSID_IS_INTEGER
+#  if HAVE_STRUCT_STATFS_F_FRSIZE
+#   define STATFS_FRSIZE(S) ((S)->f_frsize)
+#  else
+#   define STATFS_FRSIZE(S) 0
+#  endif
+# endif
+#endif
+#endif //! _WIN32
 
 #ifdef SB_F_NAMEMAX
 # define OUT_NAMEMAX out_uint
@@ -80,6 +128,17 @@
 # define OUT_NAMEMAX out_string
 #endif
 
+#ifndef _WIN32
+#if HAVE_STRUCT_STATVFS_F_BASETYPE
+# define STATXFS_FILE_SYSTEM_TYPE_MEMBER_NAME f_basetype
+#else
+# if HAVE_STRUCT_STATVFS_F_FSTYPENAME || HAVE_STRUCT_STATFS_F_FSTYPENAME
+#  define STATXFS_FILE_SYSTEM_TYPE_MEMBER_NAME f_fstypename
+# elif HAVE_OS_H /* BeOS */
+#  define STATXFS_FILE_SYSTEM_TYPE_MEMBER_NAME fsh_name
+# endif
+#endif
+#endif !_WIN32
 
 #if HAVE_GETATTRAT
 # include <attr.h>
