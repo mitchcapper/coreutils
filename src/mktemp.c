@@ -83,7 +83,7 @@ Files are created u+rw, and directories u+rwx, minus umask restrictions.\n\
 "), stdout);
       fputs (_("\
   -p DIR, --tmpdir[=DIR]  interpret TEMPLATE relative to DIR; if DIR is not\n\
-                        specified, use $TMPDIR if set, else /tmp.  With\n\
+                        specified, use $TMPDIR if set, else default temp dir.  With\n\
                         this option, TEMPLATE must not be an absolute name;\n\
                         unlike with -t, TEMPLATE may contain slashes, but\n\
                         mktemp creates only the final component\n\
@@ -91,7 +91,7 @@ Files are created u+rw, and directories u+rwx, minus umask restrictions.\n\
       fputs (_("\
   -t                  interpret TEMPLATE as a single file name component,\n\
                         relative to a directory: $TMPDIR, if set; else the\n\
-                        directory specified via -p; else /tmp [deprecated]\n\
+                        directory specified via -p; else default temp dir [deprecated]\n\
 "), stdout);
       fputs (HELP_OPTION_DESCRIPTION, stdout);
       fputs (VERSION_OPTION_DESCRIPTION, stdout);
@@ -268,12 +268,20 @@ main (int argc, char **argv)
       if (deprecated_t_option)
         {
           char *env = getenv ("TMPDIR");
+#ifdef _WIN32
+          if ((env && *env) == false)
+            env = getenv ("TMP");
+#endif
           if (env && *env)
             dest_dir = env;
           else if (dest_dir_arg && *dest_dir_arg)
             dest_dir = dest_dir_arg;
           else
+#ifndef _WIN32
             dest_dir = "/tmp";
+#else
+            dest_dir = "/temp";//technically could  GetTempPath but ENV TMP sohuld work
+#endif
 
           if (last_component (template) != template)
             error (EXIT_FAILURE, 0,
@@ -287,7 +295,13 @@ main (int argc, char **argv)
           else
             {
               char *env = getenv ("TMPDIR");
-              dest_dir = (env && *env ? env : "/tmp");
+#ifdef _WIN32
+              if ((env && *env) == false)
+                env = getenv ("TMP");
+              dest_dir = (env && *env ? env : "/temp");
+#else
+              dest_dir = (env && *env ? env : "/tmp")
+#endif
             }
           if (IS_ABSOLUTE_FILE_NAME (template))
             error (EXIT_FAILURE, 0,

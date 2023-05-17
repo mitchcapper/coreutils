@@ -331,6 +331,7 @@ direct_mode (int fd, bool enable)
 {
   if (O_DIRECT)
     {
+#ifndef _WIN32
       int fd_flags = fcntl (fd, F_GETFL);
       if (0 < fd_flags)
         {
@@ -340,6 +341,7 @@ direct_mode (int fd, bool enable)
           if (new_flags != fd_flags)
             fcntl (fd, F_SETFL, new_flags);
         }
+#endif    
     }
 
 #if HAVE_DIRECTIO && defined DIRECTIO_ON && defined DIRECTIO_OFF
@@ -956,6 +958,7 @@ static bool
 wipefd (int fd, char const *qname, struct randint_source *s,
         struct Options const *flags)
 {
+#ifndef _WIN32
   int fd_flags = fcntl (fd, F_GETFL);
 
   if (fd_flags < 0)
@@ -968,6 +971,7 @@ wipefd (int fd, char const *qname, struct randint_source *s,
       error (0, 0, _("%s: cannot shred append-only file descriptor"), qname);
       return false;
     }
+#endif    
   return do_wipefd (fd, qname, s, flags);
 }
 

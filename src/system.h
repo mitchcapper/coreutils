@@ -655,7 +655,12 @@ emit_ancillary_info (char const *program)
 
   /* Don't output this redundant message for English locales.
      Note we still output for 'C' so that it gets included in the man page.  */
-  char const *lc_messages = setlocale (LC_MESSAGES, nullptr);
+  char const* lc_messages =
+#ifndef  _WIN32
+	  setlocale(LC_MESSAGES, nullptr);
+#else
+	  nullptr;
+#endif // ! _WIN32
   if (lc_messages && STRNCMP_LIT (lc_messages, "en_"))
     {
       /* TRANSLATORS: Replace LANG_CODE in this URL with your language code

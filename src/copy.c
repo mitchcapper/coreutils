@@ -22,6 +22,10 @@
 #include <sys/types.h>
 #include <selinux/selinux.h>
 
+#ifdef _WIN32
+#define HAVE_LCHOWN 0
+#endif
+
 #if HAVE_HURD_H
 # include <hurd.h>
 #endif
@@ -920,6 +924,9 @@ set_owner (const struct cp_options *x, char const *dst_name,
            struct stat const *src_sb, bool new_dst,
            struct stat const *dst_sb)
 {
+#ifdef _WIN32
+	return 1;
+#endif
   uid_t uid = src_sb->st_uid;
   gid_t gid = src_sb->st_gid;
 
@@ -1263,7 +1270,7 @@ copy_reg (char const *src_name, char const *dst_name,
 
   /* Compare the source dev/ino from the open file to the incoming,
      saved ones obtained via a previous call to stat.  */
-  if (! psame_inode (src_sb, &src_open_sb))
+  if (src_sb->st_ino && ! psame_inode (src_sb, &src_open_sb))
     {
       error (0, 0,
              _("skipping file %s, as it was replaced while being copied"),
@@ -1741,7 +1748,7 @@ same_file_ok (char const *src_name, struct stat const *src_sb,
   struct stat tmp_src_sb;
 
   bool same_link;
-  bool same = psame_inode (src_sb, dst_sb);
+  bool same = src_sb->st_ino && psame_inode (src_sb, dst_sb);
 
   *return_now = false;
 
@@ -1802,7 +1809,7 @@ same_file_ok (char const *src_name, struct stat const *src_sb,
       src_sb_link = &tmp_src_sb;
       dst_sb_link = &tmp_dst_sb;
 
-      same_link = psame_inode (src_sb_link, dst_sb_link);
+      same_link = src_sb_link->st_ino && psame_inode (src_sb_link, dst_sb_link);
 
       /* If both are symlinks, then it's ok, but only if the destination
          will be unlinked before being opened.  This is like the test
@@ -1890,7 +1897,7 @@ same_file_ok (char const *src_name, struct stat const *src_sb,
      hard links to the same file.  */
   if (!S_ISLNK (src_sb_link->st_mode) && !S_ISLNK (dst_sb_link->st_mode))
     {
-      if (!psame_inode (src_sb_link, dst_sb_link))
+      if (!SAME_INODE (*src_sb_link, *dst_sb_link))
         return true;
 
       /* If they are the same file, it's ok if we're making hard links.  */
@@ -1951,7 +1958,7 @@ same_file_ok (char const *src_name, struct stat const *src_sb,
       else if (fstatat (dst_dirfd, dst_relname, &tmp_dst_sb, 0) != 0)
         return true;
 
-      if (!psame_inode (&tmp_src_sb, &tmp_dst_sb))
+      if (tmp_src_sb.st_ino && !psame_inode (&tmp_src_sb, &tmp_dst_sb))
         return true;
 
       if (x->hard_link)
@@ -2171,7 +2178,7 @@ source_is_dst_backup (char const *srcbase, struct stat const *src_st,
   struct stat dst_back_sb;
   int dst_back_status = fstatat (dst_dirfd, dst_back, &dst_back_sb, 0);
   free (dst_back);
-  return dst_back_status == 0 && psame_inode (src_st, &dst_back_sb);
+  return dst_back_status == 0 && src_st->st_ino && psame_inode (src_st, &dst_back_sb);
 }
 
 /* Copy the file SRC_NAME to the file DST_NAME aka DST_DIRFD+DST_RELNAME.
@@ -2246,7 +2253,7 @@ copy_internal (char const *src_name, char const *dst_name,
 
       src_mode = src_sb.st_mode;
 
-      if (S_ISDIR (src_mode) && !x->recursive)
+      if (S_ISHARDDIR(src_mode) && !x->recursive)
         {
           error (0, 0, ! x->install_mode /* cp */
                  ? _("-r not specified; omitting directory %s")
@@ -2269,7 +2276,7 @@ copy_internal (char const *src_name, char const *dst_name,
      This check is enabled only if x->src_info is non-null.  */
   if (command_line_arg && x->src_info)
     {
-      if ( ! S_ISDIR (src_mode)
+      if ( !S_ISHARDDIR(src_mode) 
            && x->backup_type == no_backups
            && seen_file (x->src_info, src_name, &src_sb))
         {
@@ -2352,7 +2359,7 @@ copy_internal (char const *src_name, char const *dst_name,
               return false;
             }
 
-          if (x->update == UPDATE_OLDER && !S_ISDIR (src_mode))
+          if (x->update == UPDATE_OLDER && !S_ISHARDDIR(src_mode))
             {
               /* When preserving timestamps (but not moving within a file
                  system), don't worry if the destination timestamp is
@@ -2875,7 +2882,7 @@ skip:
   if (! set_process_security_ctx (src_name, dst_name, src_mode, new_dst, x))
     return false;
 
-  if (S_ISDIR (src_mode))
+  if (S_ISHARDDIR (src_mode))
     {
       struct dir_list *dir;
 
@@ -2898,7 +2905,7 @@ skip:
       dir->ino = src_sb.st_ino;
       dir->dev = src_sb.st_dev;
 
-      if (new_dst || !S_ISDIR (dst_sb.st_mode))
+      if (new_dst || !S_ISHARDDIR(dst_sb.st_mode))
         {
           /* POSIX says mkdir's behavior is implementation-defined when
              (src_mode & ~S_IRWXUGO) != 0.  However, common practice is
@@ -3007,7 +3014,7 @@ skip:
                             || stat (".", &dot_sb) != 0
                             || (fstatat (dst_dirfd, dst_parent, &dst_parent_sb,
                                          0) != 0)
-                            || psame_inode (&dot_sb, &dst_parent_sb));
+                            || (dot_sb.st_ino && psame_inode (&dot_sb, &dst_parent_sb)));
           free (dst_parent);
 
           if (! in_current_dir)

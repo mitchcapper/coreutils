@@ -346,7 +346,9 @@ named file in a way that accommodates renaming, removal and creation.\n\
 static void
 die_pipe (void)
 {
+#ifndef _WIN32  
   raise (SIGPIPE);
+#endif
   exit (EXIT_FAILURE);
 }
 
@@ -979,7 +981,7 @@ recheck (struct File_spec *f, bool blocking)
   bool new_file;
   int fd = (is_stdin
             ? STDIN_FILENO
-            : open (f->name, O_RDONLY | (blocking ? 0 : O_NONBLOCK)));
+            : open_file (f->name, O_RDONLY | (blocking ? 0 : O_NONBLOCK)));
 
   affirm (valid_file_spec (f));
 
@@ -1202,6 +1204,7 @@ tail_forever (struct File_spec *f, size_t n_files, double sleep_interval)
 
           if (f[i].blocking != blocking)
             {
+              #ifndef _WIN32
               int old_flags = fcntl (fd, F_GETFL);
               int new_flags = old_flags | (blocking ? 0 : O_NONBLOCK);
               if (old_flags < 0
@@ -1220,6 +1223,7 @@ tail_forever (struct File_spec *f, size_t n_files, double sleep_interval)
                            quotef (name));
                 }
               else
+#endif              
                 f[i].blocking = blocking;
             }
 
@@ -1323,7 +1327,9 @@ tail_forever (struct File_spec *f, size_t n_files, double sleep_interval)
 
           /* Once the writer is dead, read the files once more to
              avoid a race condition.  */
+#ifndef _WIN32
           writers_dead = writers_are_dead ();
+#endif
 
           if (!writers_dead && xnanosleep (sleep_interval))
             error (EXIT_FAILURE, errno, _("cannot read realtime clock"));
@@ -1655,9 +1661,10 @@ tail_forever_inotify (int wd, struct File_spec *f, size_t n_files,
                 {
                   if (writers_dead)
                     exit (EXIT_SUCCESS);
+#ifndef _WIN32  //not sure if we end up looping forever here...
 
                   writers_dead = writers_are_dead ();
-
+#endif
                   if (writers_dead || sleep_interval <= 0)
                     delay = 0;
                   else if (sleep_interval < INT_MAX / 1000 - 1)
@@ -1999,6 +2006,21 @@ tail (char const *filename, int fd, uintmax_t n_units,
     return tail_bytes (filename, fd, n_units, read_pos);
 }
 
+static int open_file(const char* filename, int flags) {
+	int fd;
+#ifndef _WIN32
+	fd = open(filename, flags);
+#else
+	fd = -1;
+	HANDLE winHandle = CreateFile(filename, GENERIC_READ, FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_READONLY, NULL);
+	if (winHandle > 0) {
+		fd = _open_osfhandle(winHandle, _O_RDONLY);
+		if (fd > 0 && flags & O_BINARY)
+			xset_binary_mode(fd, O_BINARY);
+	}
+#endif
+	return fd;
+}
 /* Display the last N_UNITS units of the file described by F.
    Return true if successful.  */
 
@@ -2020,8 +2042,8 @@ tail_file (struct File_spec *f, uintmax_t n_files, uintmax_t n_units)
       xset_binary_mode (STDIN_FILENO, O_BINARY);
     }
   else
-    fd = open (f->name, O_RDONLY | O_BINARY
-               | nonblocking ? O_NONBLOCK : 0);
+	  fd = open_file(f->name, O_RDONLY | O_BINARY
+		  | nonblocking ? O_NONBLOCK : 0);
 
   f->tailable = !(reopen_inaccessible_files && fd == -1);
 
@@ -2321,7 +2343,11 @@ parse_options (int argc, char **argv,
   if (nbpids && !forever)
     error (0, 0,
            _("warning: PID ignored; --pid=PID is useful only when following"));
+#ifndef _WIN32  //not sure if we end up looping forever here...
   else if (nbpids && kill (pids[0], 0) != 0 && errno == ENOSYS)
+#else
+  else if (pid)
+#endif  
     {
       error (0, 0, _("warning: --pid=PID is not supported on this system"));
       nbpids = 0;

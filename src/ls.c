@@ -52,7 +52,9 @@
 
 #include <stdio.h>
 #include <setjmp.h>
+#ifndef _WIN32
 #include <pwd.h>
+#endif
 #include <getopt.h>
 #include <signal.h>
 #include <uchar.h>
@@ -1572,12 +1574,14 @@ process_signals (void)
       /* SIGTSTP is special, since the application can receive that signal
          more than once.  In this case, don't set the signal handler to the
          default.  Instead, just raise the uncatchable SIGSTOP.  */
+#ifndef _WIN32
       if (stops)
         {
           stop_signal_count = stops - 1;
           sig = SIGSTOP;
         }
       else
+#endif
         signal (sig, SIG_DFL);
 
       /* Exit or suspend the program.  */
@@ -1598,11 +1602,15 @@ signal_setup (bool init)
   /* The signals that are trapped, and the number of such signals.  */
   static int const sig[] =
     {
+#ifndef _WIN32      
       /* This one is handled specially.  */
       SIGTSTP,
 
       /* The usual suspects.  */
       SIGALRM, SIGHUP, SIGINT, SIGPIPE, SIGQUIT, SIGTERM,
+      #else
+      SIGINT,  SIGTERM,
+      #endif
 #ifdef SIGPOLL
       SIGPOLL,
 #endif
@@ -1655,7 +1663,11 @@ signal_setup (bool init)
           caught_sig[j] = (signal (sig[j], SIG_IGN) != SIG_IGN);
           if (caught_sig[j])
             {
+#ifndef _WIN32
               signal (sig[j], sig[j] == SIGTSTP ? stophandler : sighandler);
+#else
+              signal (sig[j], sighandler);
+#endif              
               siginterrupt (sig[j], 0);
             }
         }
@@ -1881,8 +1893,10 @@ main (int argc, char **argv)
          This can process signals out of order, but there doesn't seem to
          be an easy way to do them in order, and the order isn't that
          important anyway.  */
+#ifndef _WIN32
       for (j = stop_signal_count; j; j--)
         raise (SIGSTOP);
+#endif        
       j = interrupt_signal;
       if (j)
         raise (j);
@@ -2265,7 +2279,9 @@ decode_switches (int argc, char **argv)
           break;
 
         case 'Z':
+#ifndef _WIN32
           print_scontext = true;
+#endif          
           break;
 
         case ZERO_OPTION:
@@ -2324,6 +2340,13 @@ decode_switches (int argc, char **argv)
               && 0 < ws.ws_col)
             linelen = ws.ws_col <= MIN (PTRDIFF_MAX, SIZE_MAX) ? ws.ws_col : 0;
         }
+#elif defined(_WIN32)
+	  CONSOLE_SCREEN_BUFFER_INFO csbi;
+	  int columns, rows;
+
+	  GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+	  linelen = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+
 #endif
       if (linelen < 0)
         {
@@ -4892,12 +4915,12 @@ get_type_indicator (bool stat_ok, mode_t mode, enum filetype type)
     }
   else
     {
-      if (stat_ok ? S_ISDIR (mode) : type == directory || type == arg_directory)
+	  if (stat_ok ? S_ISLNK(mode) : type == symbolic_link) //windows has symlink dir type so needs to be before isdir
+		  c = '@';
+	  else if (stat_ok ? S_ISDIR (mode) : type == directory || type == arg_directory)
         c = '/';
       else if (indicator_style == slash)
         c = 0;
-      else if (stat_ok ? S_ISLNK (mode) : type == symbolic_link)
-        c = '@';
       else if (stat_ok ? S_ISFIFO (mode) : type == fifo)
         c = '|';
       else if (stat_ok ? S_ISSOCK (mode) : type == sock)
@@ -4993,6 +5016,8 @@ get_color_indicator (const struct fileinfo *f, bool symlink_target)
           else if ((1 < f->stat.st_nlink) && is_colored (C_MULTIHARDLINK))
             type = C_MULTIHARDLINK;
         }
+	  else if (S_ISLNK(mode)) //windows has symlink dir type so needs to be before isdir
+		  type = C_LINK;
       else if (S_ISDIR (mode))
         {
           type = C_DIR;
@@ -5005,8 +5030,6 @@ get_color_indicator (const struct fileinfo *f, bool symlink_target)
           else if ((mode & S_ISVTX) != 0 && is_colored (C_STICKY))
             type = C_STICKY;
         }
-      else if (S_ISLNK (mode))
-        type = C_LINK;
       else if (S_ISFIFO (mode))
         type = C_FIFO;
       else if (S_ISSOCK (mode))

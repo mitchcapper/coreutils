@@ -412,6 +412,7 @@ print_size (const struct duinfo *pdui, char const *string)
 static void
 fill_mount_table (void)
 {
+  #ifndef _WIN32
   struct mount_entry *mnt_ent = read_file_system_list (false);
   while (mnt_ent)
     {
@@ -432,6 +433,7 @@ fill_mount_table (void)
       mnt_ent = mnt_ent->me_next;
       free_mount_entry (mnt_free);
     }
+    #endif
 }
 
 /* This function checks whether any of the directories in the cycle that
