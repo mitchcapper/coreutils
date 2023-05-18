@@ -2014,7 +2014,7 @@ static int open_file(const char* filename, int flags) {
 	fd = -1;
 	HANDLE winHandle = CreateFile(filename, GENERIC_READ, FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_READONLY, NULL);
 	if (winHandle > 0) {
-		fd = _open_osfhandle(winHandle, _O_RDONLY);
+		fd = _open_osfhandle((intptr_t)winHandle, _O_RDONLY);
 		if (fd > 0 && flags & O_BINARY)
 			xset_binary_mode(fd, O_BINARY);
 	}
