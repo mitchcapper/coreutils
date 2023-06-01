@@ -715,7 +715,7 @@ static pid_t
 reap (pid_t pid)
 {
   int status;
-#ifndef _WIN32  
+#ifndef _WIN32
   pid_t cpid = waitpid ((pid ? pid : -1), &status, (pid ? 0 : WNOHANG));
 #else
   pid_t cpid = waitpid ((pid ? pid : -1), &status, 0);
@@ -4395,10 +4395,10 @@ main (int argc, char **argv)
     static int const sig[] =
       {
         /* The usual suspects.  */
-#ifndef _WIN32        
+#ifndef _WIN32
         SIGALRM, SIGHUP, SIGINT, SIGPIPE, SIGQUIT, SIGTERM,
 #else
-        SIGINT, SIGTERM,
+        SIGINT, SIGTERM, SIGPIPE,
 #endif
 #ifdef SIGPOLL
         SIGPOLL,
@@ -4445,7 +4445,7 @@ main (int argc, char **argv)
         }
 #endif
   }
-#ifndef _WIN32  
+#ifndef _WIN32
   signal (SIGCHLD, SIG_DFL); /* Don't inherit CHLD handling from parent.  */
 #endif
   /* The signal mask is known, so it is safe to invoke exit_cleanup.  */

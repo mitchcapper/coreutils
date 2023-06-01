@@ -1602,14 +1602,14 @@ signal_setup (bool init)
   /* The signals that are trapped, and the number of such signals.  */
   static int const sig[] =
     {
-#ifndef _WIN32      
+#ifndef _WIN32
       /* This one is handled specially.  */
       SIGTSTP,
 
       /* The usual suspects.  */
       SIGALRM, SIGHUP, SIGINT, SIGPIPE, SIGQUIT, SIGTERM,
       #else
-      SIGINT,  SIGTERM,
+      SIGINT,  SIGTERM, SIGPIPE,
       #endif
 #ifdef SIGPOLL
       SIGPOLL,
@@ -1667,7 +1667,7 @@ signal_setup (bool init)
               signal (sig[j], sig[j] == SIGTSTP ? stophandler : sighandler);
 #else
               signal (sig[j], sighandler);
-#endif              
+#endif
               siginterrupt (sig[j], 0);
             }
         }
@@ -1896,7 +1896,7 @@ main (int argc, char **argv)
 #ifndef _WIN32
       for (j = stop_signal_count; j; j--)
         raise (SIGSTOP);
-#endif        
+#endif
       j = interrupt_signal;
       if (j)
         raise (j);
@@ -2281,7 +2281,7 @@ decode_switches (int argc, char **argv)
         case 'Z':
 #ifndef _WIN32
           print_scontext = true;
-#endif          
+#endif
           break;
 
         case ZERO_OPTION:
