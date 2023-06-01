@@ -346,9 +346,7 @@ named file in a way that accommodates renaming, removal and creation.\n\
 static void
 die_pipe (void)
 {
-#ifndef _WIN32  
   raise (SIGPIPE);
-#endif
   exit (EXIT_FAILURE);
 }
 
