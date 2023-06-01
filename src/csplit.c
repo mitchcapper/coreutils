@@ -1374,8 +1374,8 @@ main (int argc, char **argv)
 #ifndef _WIN32
         SIGALRM, SIGHUP, SIGINT, SIGPIPE, SIGQUIT, SIGTERM,
 #else
-      SIGINT,  SIGTERM,
-#endif        
+      SIGINT,  SIGTERM, SIGPIPE,
+#endif
 #ifdef SIGPOLL
         SIGPOLL,
 #endif

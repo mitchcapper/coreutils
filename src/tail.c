@@ -345,9 +345,7 @@ named file in a way that accommodates renaming, removal and creation.\n\
 static void
 die_pipe (void)
 {
-#ifndef _WIN32  
   raise (SIGPIPE);
-#endif
   exit (EXIT_FAILURE);
 }
 
@@ -1222,7 +1220,7 @@ tail_forever (struct File_spec *f, size_t n_files, double sleep_interval)
                            quotef (name));
                 }
               else
-#endif              
+#endif
                 f[i].blocking = blocking;
             }
 
@@ -2343,7 +2341,7 @@ parse_options (int argc, char **argv,
   else if (nbpids && kill (pids[0], 0) != 0 && errno == ENOSYS)
 #else
   else if (pid)
-#endif  
+#endif
     {
       error (0, 0, _("warning: --pid=PID is not supported on this system"));
       nbpids = 0;
