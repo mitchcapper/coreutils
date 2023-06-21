@@ -119,21 +119,21 @@ path_prefix (char const *prefix, char const *path)
   /* '/' is the prefix of everything except '//' (since we know '//'
      is only present after canonicalization if it is distinct).  */
   if (!*prefix)
-    return *path != '/';
+    return  ! ISSLASH(*path);
 
   /* Likewise, '//' is a prefix of any double-slash path.  */
-  if (*prefix == '/' && !prefix[1])
-    return *path == '/';
+  if (ISSLASH(*prefix) && !prefix[1])
+    return ISSLASH(*path);
 
   /* Any other prefix has a non-slash portion.  */
   while (*prefix && *path)
     {
-      if (*prefix != *path)
+      if (! PATH_CHAR_EQ(*prefix, *path) )
         break;
       prefix++;
       path++;
     }
-  return (!*prefix && (*path == '/' || !*path));
+  return (!*prefix && (ISSLASH(*path) || !*path));
 }
 
 static bool

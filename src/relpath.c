@@ -20,6 +20,7 @@
 
 #include "system.h"
 #include "relpath.h"
+#include "filename.h"
 
 
 /* Return the length of the longest common prefix
@@ -35,14 +36,14 @@ path_common_prefix (char const *path1, char const *path2)
   /* We already know path1[0] and path2[0] are '/'.  Special case
      '//', which is only present in a canonical name on platforms
      where it is distinct.  */
-  if ((path1[1] == '/') != (path2[1] == '/'))
+  if ((ISSLASH(path1[1])) != (ISSLASH(path2[1])))
     return 0;
 
   while (*path1 && *path2)
     {
-      if (*path1 != *path2)
+      if (!PATH_CHAR_EQ (*path1,*path2))
         break;
-      if (*path1 == '/')
+      if (ISSLASH(*path1))
         ret = i + 1;
       path1++;
       path2++;
@@ -50,8 +51,8 @@ path_common_prefix (char const *path1, char const *path2)
     }
 
   if ((!*path1 && !*path2)
-      || (!*path1 && *path2 == '/')
-      || (!*path2 && *path1 == '/'))
+      || (!*path1 && ISSLASH(*path2))
+      || (!*path2 && ISSLASH(*path1)))
     ret = i;
 
   return ret;
@@ -98,9 +99,9 @@ relpath (char const *can_fname, char const *can_reldir, char *buf, size_t len)
   char const *fname_suffix = can_fname + common_index;
 
   /* Skip over extraneous '/'.  */
-  if (*relto_suffix == '/')
+  if (ISSLASH(*relto_suffix))
     relto_suffix++;
-  if (*fname_suffix == '/')
+  if (ISSLASH(*fname_suffix))
     fname_suffix++;
 
   /* Replace remaining components of --relative-to with '..', to get
@@ -110,13 +111,13 @@ relpath (char const *can_fname, char const *can_reldir, char *buf, size_t len)
       buf_err |= buffer_or_output ("..", &buf, &len);
       for (; *relto_suffix; ++relto_suffix)
         {
-          if (*relto_suffix == '/')
-            buf_err |= buffer_or_output ("/..", &buf, &len);
+          if (ISSLASH(*relto_suffix))
+            buf_err |= buffer_or_output ((char[]) { DIR_SEPARATOR,'.','.', '\0' }, &buf, &len);
         }
 
       if (*fname_suffix)
         {
-          buf_err |= buffer_or_output ("/", &buf, &len);
+		  buf_err |= buffer_or_output((char[]) { DIR_SEPARATOR, '\0' }, &buf, &len);
           buf_err |= buffer_or_output (fname_suffix, &buf, &len);
         }
     }
