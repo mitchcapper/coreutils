@@ -2051,13 +2051,17 @@ copy_with_unblock (char const *buf, idx_t nread)
 static void
 set_fd_flags (int fd, int add_flags, char const *name)
 {
-#ifndef _WIN32  
+
   /* Ignore file creation flags that are no-ops on file descriptors.  */
   add_flags &= ~ (O_NOCTTY | O_NOFOLLOW);
 
   if (add_flags)
     {
+#ifndef _WIN32
       int old_flags = fcntl (fd, F_GETFL);
+#else
+	  int old_flags = 0;
+#endif // !_WIN32
       int new_flags = old_flags | add_flags;
       bool ok = true;
       if (old_flags < 0)
@@ -2083,16 +2087,20 @@ set_fd_flags (int fd, int add_flags, char const *name)
                 }
               new_flags &= ~ (O_DIRECTORY | O_NOLINKS);
             }
-
+#ifdef _WIN32
+		  if(new_flags & O_BINARY && setmode(fd, O_BINARY) == -1)
+			  ok = false;
+#else
           if (ok && old_flags != new_flags
               && fcntl (fd, F_SETFL, new_flags) == -1)
             ok = false;
+#endif // !_WIN32
         }
 
       if (!ok)
         error (EXIT_FAILURE, errno, _("setting flags for %s"), quoteaf (name));
     }
-#endif    
+
 }
 
 /* The main loop.  */
