@@ -1675,6 +1675,10 @@ scanargs (int argc, char *const *argv)
       || multiple_bits_set (output_flags & (O_DIRECT | O_NOCACHE)))
     error (EXIT_FAILURE, 0, _("cannot combine direct and nocache"));
 
+  if (!(input_flags & O_TEXT)) //default to binary mode (like linux) unless text explicitly set
+	  input_flags |= O_BINARY;
+  if (!(output_flags & O_TEXT)) //default to binary mode (like linux) unless text explicitly set
+	  output_flags |= O_BINARY;
   if (input_flags & O_NOCACHE)
     {
       i_nocache = true;
@@ -2088,6 +2092,8 @@ set_fd_flags (int fd, int add_flags, char const *name)
               new_flags &= ~ (O_DIRECTORY | O_NOLINKS);
             }
 #ifdef _WIN32
+		  if (new_flags & O_TEXT && setmode(fd, O_TEXT) == -1)
+			  ok = false;
 		  if(new_flags & O_BINARY && setmode(fd, O_BINARY) == -1)
 			  ok = false;
 #else
