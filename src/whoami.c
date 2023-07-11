@@ -29,8 +29,6 @@
 #include <unistd.h>
 #endif
 #include "system.h"
-#include "die.h"
-#include "error.h"
 #include "long-options.h"
 #include "quote.h"
 
