@@ -530,7 +530,7 @@ strip (char const *name)
   const char* const values[] = {strip_program,name, NULL};
 
 
-  status = execute(strip_program,strip_program,values, NULL, false, false,false,false, true, false, NULL);
+  status = execute(strip_program,strip_program,values, NULL, NULL, false, false,false,false, true, false, NULL);
    if (! WIFEXITED (status) || WEXITSTATUS (status))
         error (0, 0, _("strip process terminated abnormally"));
       else
