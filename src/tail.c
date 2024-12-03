@@ -49,6 +49,9 @@
 #include "xstrtol.h"
 #include "xstrtod.h"
 
+#ifdef _WIN32
+typedef   signed long     blksize_t;
+#endif
 #if HAVE_INOTIFY
 # include "hash.h"
 # include <poll.h>
@@ -2344,7 +2347,7 @@ parse_options (int argc, char **argv,
 #ifndef _WIN32  //not sure if we end up looping forever here...
   else if (nbpids && kill (pids[0], 0) != 0 && errno == ENOSYS)
 #else
-  else if (pid)
+  else if (nbpids)
 #endif
     {
       error (0, 0, _("warning: --pid=PID is not supported on this system"));
