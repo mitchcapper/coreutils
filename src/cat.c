@@ -708,6 +708,7 @@ main (int argc, char **argv)
 
       if (stat_buf.st_dev == out_dev && stat_buf.st_ino == out_ino)
         {
+#ifndef _WIN32
           if (out_flags < -1)
             out_flags = fcntl (STDOUT_FILENO, F_GETFL);
           bool exhausting = 0 <= out_flags && out_flags & O_APPEND;
@@ -717,6 +718,9 @@ main (int argc, char **argv)
               if (0 <= in_pos)
                 exhausting = in_pos < lseek (STDOUT_FILENO, 0, SEEK_CUR);
             }
+#else
+          bool exhausting = out_isreg && (lseek (input_desc, 0, SEEK_CUR) < stat_buf.st_size);
+#endif          
           if (exhausting)
             {
               error (0, 0, _("%s: input file is output file"), quotef (infile));
