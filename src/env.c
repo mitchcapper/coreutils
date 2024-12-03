@@ -556,8 +556,11 @@ parse_signal_action_params (char const *arg, bool set_default)
 #ifndef _WIN32
         signals[i] = set_default ? DEFAULT_NOERR : IGNORE_NOERR;
 #else
+      {
+        char signame[SIG2STR_MAX];
         if (sig2str (i, signame) == 0 && set_default)
           signals[i] = DEFAULT_NOERR;
+      }
 #endif 
       return;
     }
