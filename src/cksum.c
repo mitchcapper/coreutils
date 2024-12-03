@@ -291,15 +291,23 @@ crc_sum_stream (FILE *stream, void *resstream, uintmax_t *length)
   static bool (*cksum_fp) (FILE *, uint_fast32_t *, uintmax_t *);
   if (! cksum_fp)
     {
+#if USE_AVX512_CRC32      
       if (avx512_supported ())
         cksum_fp = cksum_avx512;
-      else if (avx2_supported ())
+      else
+#endif      
+#if USE_AVX2_CRC32
+      if (avx2_supported ())
         cksum_fp = cksum_avx2;
-      else if (pclmul_supported ())
+      else 
+#endif
+#if USE_PCLMUL_CRC32
+      if (pclmul_supported ())
         cksum_fp = cksum_pclmul;
       else if (vmull_supported ())
         cksum_fp = cksum_vmull;
       else
+#endif      
         cksum_fp = cksum_slice8;
     }
 
