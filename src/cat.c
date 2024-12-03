@@ -717,6 +717,7 @@ main (int argc, char **argv)
           && have_out_dev
           && stat_buf.st_dev == out_dev && stat_buf.st_ino == out_ino)
         {
+#ifndef _WIN32
           off_t in_pos = lseek (input_desc, 0, SEEK_CUR);
           if (0 <= in_pos)
             {
@@ -725,6 +726,9 @@ main (int argc, char **argv)
               int whence = (0 <= out_flags && out_flags & O_APPEND
                             ? SEEK_END : SEEK_CUR);
               if (in_pos < lseek (STDOUT_FILENO, 0, whence))
+#else
+              if (out_isreg && (lseek (input_desc, 0, SEEK_CUR) < stat_buf.st_size)
+#endif
                 {
                   error (0, 0, _("%s: input file is output file"),
                          quotef (infile));
