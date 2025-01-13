@@ -3716,7 +3716,11 @@ get_link_name (char const *filename, struct fileinfo *f, bool command_line_arg)
 {
   f->linkname = areadlink_with_size (filename, f->stat.st_size);
   if (f->linkname == nullptr)
+#ifdef _WIN32
+      file_failure(command_line_arg, _("cannot read symbolic link %s or symbolic link points to a volume id (\\??\\Volume*)"),
+#else
     file_failure (command_line_arg, _("cannot read symbolic link %s"),
+#endif // _WIN32
                   filename);
 }
 
