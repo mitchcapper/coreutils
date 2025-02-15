@@ -765,7 +765,29 @@ initialize_signals (void)
 
   return;
 }
+#ifdef _WIN32
+int clearenv(void)
+{
+	char* envp, * s;
+	char name[MAX_LONG_PATH];
 
+	while (environ && (envp = *environ)) {
+		if ((s = strchr(envp, '=')) != NULL) {
+			strncpy(name, envp, s - envp + 1);
+			strncpy_s(name, sizeof(name), envp, s - envp+1);
+			name[s - envp + 1+1] = 0;
+
+			if (_putenv(name) == -1) {
+				return -1;
+			}
+		}
+		else {
+			return -1;
+		}
+	}
+	return 0;
+}
+#endif
 int
 main (int argc, char **argv)
 {
@@ -849,8 +871,12 @@ main (int argc, char **argv)
   if (ignore_environment)
     {
       devmsg ("cleaning environ\n");
+#ifndef _WIN32
       static char *dummy_environ[] = { nullptr };
       environ = dummy_environ;
+#else
+      clearenv();
+#endif
     }
   else
     unset_envvars ();
