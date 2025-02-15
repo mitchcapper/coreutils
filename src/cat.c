@@ -727,7 +727,7 @@ main (int argc, char **argv)
                             ? SEEK_END : SEEK_CUR);
               if (in_pos < lseek (STDOUT_FILENO, 0, whence))
 #else
-              if (out_isreg && (lseek (input_desc, 0, SEEK_CUR) < stat_buf.st_size)
+              if (out_isreg && (lseek (input_desc, 0, SEEK_CUR) < stat_buf.st_size)) { // extra to account for bracket above in non _WIN32
 #endif
                 {
                   error (0, 0, _("%s: input file is output file"),
