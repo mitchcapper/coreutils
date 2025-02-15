@@ -55,7 +55,7 @@ enum SIGNAL_MODE {
   DEFAULT_NOERR, /* Ditto, but ignore sigaction(2) errors.  */
 #ifndef _WIN32
   IGNORE,        /* Set to ignore (SIG_IGN).  */
-#endif  
+#endif
   IGNORE_NOERR   /* Ditto, but ignore sigaction(2) errors.  */
 };
 static enum SIGNAL_MODE *signals;
@@ -561,7 +561,7 @@ parse_signal_action_params (char const *arg, bool set_default)
         if (sig2str (i, signame) == 0 && set_default)
           signals[i] = DEFAULT_NOERR;
       }
-#endif 
+#endif
       return;
     }
 
@@ -766,24 +766,23 @@ initialize_signals (void)
   return;
 }
 #ifdef _WIN32
-int clearenv(void)
-{
+#include <../ucrt/stdio.h>
+static int clearenv(void) {
 	char* envp, * s;
-	char name[MAX_LONG_PATH];
+	char name[_MAX_ENV];
+	int name_len;
 
 	while (environ && (envp = *environ)) {
 		if ((s = strchr(envp, '=')) != NULL) {
-			strncpy(name, envp, s - envp + 1);
-			strncpy_s(name, sizeof(name), envp, s - envp+1);
-			name[s - envp + 1+1] = 0;
+			name_len = s - envp;
+			strncpy_s(name, sizeof(name), envp, name_len);
+			name[name_len + 1] = 0;
 
-			if (_putenv(name) == -1) {
+			if (_putenv_s(name, "") == -1)
 				return -1;
-			}
 		}
-		else {
+		else
 			return -1;
-		}
 	}
 	return 0;
 }
